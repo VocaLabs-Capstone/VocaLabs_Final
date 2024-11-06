@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "VocLabs",
+  "version": "1.0",
+  "description": "Crawl and summarize content from the current page.",
+  "permissions": ["activeTab", "scripting"],
+  "host_permissions": ["https://api-inference.huggingface.co/*"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "spong16.png"
+  }
+}

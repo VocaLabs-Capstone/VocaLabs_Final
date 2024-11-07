@@ -1,4 +1,4 @@
-# VocaLabs_Final
+# VocaLabs
 
 ## 글나무 : 외신 기사 요약 및 번역
 
@@ -26,13 +26,29 @@
 3. <strong>다국어 번역모델을 사용해서 다양한 언어로의 번역이 가능해집니다.</strong>
 
 
+<br/><br/>
+
 
 ## 팀 소개
+
 **김동규**: UI/UX 디자인, 파이프라인 제작, 통합 성능 테스트
+
 **김연훈**: AI 모델 학습 및 데이터셋 제작
+
 **이선구**: 데이터셋 제작, 전처리
+
 **이학빈**: 백엔드 개발(서버 구축, API 개발) 
+
 **전상인**: 프론트 개발(HTML, JavaScript 개발)
 
 
-##프로젝트 흐름도
+
+<br/><br/>
+
+## 프로젝트 흐름도
+
+<div align="center">
+  
+![파이프라인](https://github.com/user-attachments/assets/326bc0d1-4ebd-49fb-9b4b-e5a36587a32d)
+
+</div>

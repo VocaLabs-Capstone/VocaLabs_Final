@@ -1,9 +1,14 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from pydantic import BaseModel
 from transformers import PegasusTokenizer, PegasusForConditionalGeneration, AutoTokenizer, AutoModelForSeq2SeqLM
+import uvicorn
 import re
 
 app = FastAPI()
+
+# 요청 데이터 모델 정의
+class TextData(BaseModel):
+    text: str
 
 # 요약 모델 및 토크나이저 설정
 summarizer_model_name = "EXP442/pegasus_summarizer"
@@ -14,10 +19,6 @@ summarizer_model = PegasusForConditionalGeneration.from_pretrained(summarizer_mo
 translator_model_name = "EXP442/nllb_translator_pretrained"
 translator_model = AutoModelForSeq2SeqLM.from_pretrained(translator_model_name, forced_bos_token_id=256098)
 translator_tokenizer = AutoTokenizer.from_pretrained(translator_model_name, src_lang='eng_Latn', tgt_lang='kor_Hang')
-
-# 입력 데이터 모델 정의
-class TextData(BaseModel):
-    text: str
 
 # 텍스트 번역 함수
 def translate_text(text):
@@ -63,8 +64,8 @@ def translate_and_combine_summaries(summaries):
     combined_translation = "\n".join(translated_summaries)
     return combined_translation 
 
-# API 엔드포인트 정의
-@app.post('/process_text')
+# 엔드포인트 정의
+@app.post("/process_text")
 async def process_text(data: TextData):
     article_text = data.text
     
@@ -76,3 +77,7 @@ async def process_text(data: TextData):
     
     # 결과 반환
     return {"summary_translation": combined_translation}
+
+# FastAPI 서버 실행
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)

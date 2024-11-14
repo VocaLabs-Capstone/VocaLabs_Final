@@ -12,8 +12,8 @@ summarizer_model = PegasusForConditionalGeneration.from_pretrained(summarizer_mo
 
 # 번역 모델 및 토크나이저 설정
 translator_model_name = "EXP442/nllb_translator_pretrained"
-translator_model = AutoModelForSeq2SeqLM.from_pretrained(translator_model_name)
-translator_tokenizer = AutoTokenizer.from_pretrained(translator_model_name)
+translator_model = AutoModelForSeq2SeqLM.from_pretrained(translator_model_name, forced_bos_token_id=256098)
+translator_tokenizer = AutoTokenizer.from_pretrained(translator_model_name, src_lang='eng_Latn', tgt_lang='kor_Hang')
 
 # 입력 데이터 모델 정의
 class TextData(BaseModel):
@@ -51,7 +51,7 @@ def summarize_long_text(article_text, target_chunk_length=2048):
 
     for chunk in chunks:
         inputs = summarizer_tokenizer(chunk, max_length=target_chunk_length, return_tensors="pt", truncation=True)
-        summary_ids = summarizer_model.generate(inputs["input_ids"], max_length=200, min_length=50, length_penalty=2.0, num_beams=4, early_stopping=True)
+        summary_ids = summarizer_model.generate(inputs["input_ids"], max_length=100, min_length=50, length_penalty=2.0, num_beams=2, early_stopping=True)
         summary = summarizer_tokenizer.decode(summary_ids[0], skip_special_tokens=True)
         summaries.append(summary)
 

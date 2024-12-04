@@ -1,14 +1,33 @@
+document.addEventListener("DOMContentLoaded", () => {
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    const url = tabs[0].url;
+
+    let detectedSite = "";
+    if (url.includes("bbc.com")) {
+      detectedSite = "bbc";
+    } else if (url.includes("cnn.com")) {
+      detectedSite = "cnn";
+    } else {
+      detectedSite = "other";
+    }
+
+    const newsSiteDropdown = document.getElementById("news-site");
+    newsSiteDropdown.value = detectedSite;
+  });
+});
+
 document.getElementById("crawl-content").addEventListener("click", () => {
+  const selectedSite = document.getElementById("news-site").value;
+
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     chrome.scripting.executeScript(
       {
         target: { tabId: tabs[0].id },
         function: getFilteredMainContent,
+        args: [selectedSite],
       },
       (results) => {
-        const mainContent = results[0].result || "No main content found!";
-
-        // 텍스트박스에 본문 내용 표시 (사용자가 수정 가능)
+        const mainContent = results[0].result || "내용이 없습니다.";
         document.getElementById("content-display").value = mainContent;
       }
     );
@@ -16,77 +35,138 @@ document.getElementById("crawl-content").addEventListener("click", () => {
 });
 
 document.getElementById("summarize-content").addEventListener("click", () => {
-  // 텍스트박스에서 내용을 가져옵니다.
-  const content = document.getElementById("content-display").value;
-
+  let content = document.getElementById("content-display").value;
   if (!content) {
-    alert("Please crawl content first.");
+    alert("먼저 콘텐츠를 크롤링하세요.");
     return;
   }
 
-  // EXP442/pegasus_summarizer 모델을 사용하여 요약
-  fetch("https://api-inference.huggingface.co/models/google/pegasus-xsum", {
-    method: "POST",
-    headers: {
-      Authorization: "Bearer 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", // 실제 토큰으로 교체
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ inputs: content }),
-  })
-    .then((response) => {
-      if (!response.ok) {
-        console.error("API 호출 실패:", response.status, response.statusText);
-        document.getElementById("summary-display").value =
-          "API 호출 실패: " + response.status;
-        return null;
-      }
-      return response.json();
-    })
-    .then((data) => {
-      console.log("API 응답 데이터:", data); // 응답 데이터 전체 출력
-
-      if (data && data[0] && data[0].summary_text) {
-        // Pegasus 모델의 경우 summary_text 필드를 사용합니다.
-        document.getElementById("summary-display").value = data[0].summary_text;
-      } else {
-        document.getElementById("summary-display").value =
-          "Summary could not be generated.";
-        console.warn("summary_text 필드가 응답에 없습니다.");
-      }
-    })
-    .catch((error) => {
-      console.error("Error summarizing content:", error);
-      document.getElementById("summary-display").value =
-        "Failed to summarize content.";
-    });
-});
-
-function getFilteredMainContent() {
-  const mainElement =
-    document.querySelector("main") ||
-    document.querySelector("article") ||
-    document.querySelector('div[role="main"]');
-
-  if (mainElement) {
-    const mainClone = mainElement.cloneNode(true);
-
-    const elementsToRemove = mainClone.querySelectorAll(
-      "nav, aside, footer, header, .sidebar, .advertisement, .ad, .footer, " +
-        ".social, .sns, .share, .like, .caption, .credit, .watermark, figcaption, [class*='social'], [class*='sns'], " +
-        "[class*='share'], [class*='like'], img"
+  // 원문 길이 제한 (5000자 초과시 자르기)
+  if (content.length > 2000) {
+    let truncatedContent = content.slice(0, 2000); // 우선 2000자까지 자름
+    const lastSentenceEnd = Math.max(
+      truncatedContent.lastIndexOf("."),
+      truncatedContent.lastIndexOf("!"),
+      truncatedContent.lastIndexOf("?")
     );
-    elementsToRemove.forEach((element) => element.remove());
 
-    let content = mainClone.textContent.trim();
+    if (lastSentenceEnd !== -1) {
+      content = truncatedContent.slice(0, lastSentenceEnd + 1); // 문장 단위로 자름
+    } else {
+      content = truncatedContent; // 문장 끝을 찾지 못하면 기본적으로 2000자로 자름
+    }
 
-    content = content
-      .replace(/\s\s+/g, " ")
-      .replace(/(\.\s)/g, ".\n\n")
-      .replace(/GettyImages/gi, "")
-      .trim();
-
-    return content;
+    //alert("텍스트가 2000자 이하로 잘렸습니다.");
   }
 
-  return "Main content not found.";
+  const summaryDisplay = document.getElementById("summary-display");
+  summaryDisplay.value = ""; // 결과 초기화
+  const loadingSpinner = document.getElementById("loading-spinner");
+  loadingSpinner.style.display = "block";
+
+  async function processContent() {
+    const requestData = JSON.stringify({ text: content });
+
+    try {
+      const response = await fetch("http://34.64.81.1:8080/process_text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: requestData,
+      });
+
+      if (!response.ok) {
+        summaryDisplay.value = "\n[요약 실패]";
+        return;
+      }
+
+      const data = await response.json();
+      summaryDisplay.value = data.summary_translation || "\n[요약 실패]";
+    } catch (error) {
+      summaryDisplay.value = "\n[요약에 실패했습니다.]";
+    } finally {
+      loadingSpinner.style.display = "none";
+    }
+  }
+
+  processContent();
+});
+
+document.getElementById("open-in-new-tab").addEventListener("click", () => {
+  const originalContent = document.getElementById("content-display").value;
+  const summarizedContent = document.getElementById("summary-display").value;
+
+  if (!originalContent || !summarizedContent) {
+    alert("크롤링 및 요약을 먼저 수행하세요.");
+    return;
+  }
+
+  const newTabContent = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>원문 및 요약 결과</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            line-height: 1.8;
+            padding: 20px;
+          }
+          h2 {
+            color: #0099cc;
+            font-size: 24px; /* 제목 크기 증가 */
+          }
+          pre {
+            background-color: #f4f4f4;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 18px; /* 텍스트 크기 증가 */
+            line-height: 1.6; /* 텍스트 간격 조정 */
+          }
+        </style>
+      </head>
+      <body>
+        <h2>크롤링된 원문</h2>
+        <pre>${originalContent}</pre>
+        <h2>요약 및 번역 결과</h2>
+        <pre>${summarizedContent}</pre>
+      </body>
+    </html>
+  `;
+
+  const newTab = window.open();
+  newTab.document.open();
+  newTab.document.write(newTabContent);
+  newTab.document.close();
+});
+
+function getFilteredMainContent(selectedSite) {
+  let content = "";
+  if (selectedSite === "bbc") {
+    const textBlocks = document.querySelectorAll(
+      'div[data-component="text-block"]'
+    );
+    textBlocks.forEach((block) => {
+      content += block.textContent.trim() + "\n\n";
+    });
+  } else if (selectedSite === "cnn") {
+    const paragraphs = document.querySelectorAll(
+      "p.paragraph.inline-placeholder.vossi-paragraph"
+    );
+    paragraphs.forEach((paragraph) => {
+      content += paragraph.textContent.trim() + "\n\n";
+    });
+  } else {
+    alert("지원하지 않는 사이트입니다.");
+    return;
+  }
+
+  return (
+    content
+      .replace(/\s\s+/g, " ")
+      .replace(/(\.\s)/g, ".\n\n")
+      .trim() || "텍스트 블록에 내용이 없습니다."
+  );
 }

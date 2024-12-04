@@ -2,11 +2,24 @@
   "manifest_version": 3,
   "name": "VocLabs",
   "version": "1.0",
-  "description": "Crawl and summarize content from the current page.",
+  "description": "뉴스 본문 요약 및 번역 확장 프로그렘",
   "permissions": ["activeTab", "scripting"],
-  "host_permissions": ["https://api-inference.huggingface.co/*"],
+
+  "host_permissions": [
+    "http://34.64.52.104:8080/process_text",
+    "http://34.64.81.1:8080/process_text"
+  ],
+  "icons": {
+    "16": "16.png",
+    "48": "48.png",
+    "128": "128.png"
+  },
   "action": {
-    "default_popup": "popup.html",
-    "default_icon": "spong16.png"
+    "default_icon": {
+      "16": "16.png",
+      "48": "48.png",
+      "128": "128.png"
+    },
+    "default_popup": "popup.html"
   }
 }

@@ -14,6 +14,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const newsSiteDropdown = document.getElementById("news-site");
     newsSiteDropdown.value = detectedSite;
   });
+
+  // 닫기 버튼 활성화
+  const closeButton = document.querySelector(".close-btn");
+  if (closeButton) {
+    closeButton.addEventListener("click", () => {
+      window.close();
+    });
+  }
 });
 
 document.getElementById("crawl-content").addEventListener("click", () => {
@@ -55,8 +63,6 @@ document.getElementById("summarize-content").addEventListener("click", () => {
     } else {
       content = truncatedContent; // 문장 끝을 찾지 못하면 기본적으로 2000자로 자름
     }
-
-    //alert("텍스트가 2000자 이하로 잘렸습니다.");
   }
 
   const summaryDisplay = document.getElementById("summary-display");
